@@ -1,5 +1,4 @@
 const express = require('express');
-const axios = require('axios');
 const userController = require('./user.controller');
 
 let app = express();
@@ -19,6 +18,8 @@ if (process.env.NODE_ENV === 'production' || process.env.MODE === 'RUN_AS_SERVIC
             .split(':');
 
         if (
+            !username || !password
+            ||
             username !== process.env.HTTP_AUTH_USERNAME
             ||
             password !== process.env.HTTP_AUTH_PASSWORD
@@ -58,12 +59,18 @@ function bootstrapService() {
         }, parseInt(process.env.HEARTBEAT_INTERVAL) * 1000);
 
 
-        // Register, this service to Gateway
+        // Makes Http Request to Register Service to Gateway
         async function registerService() {
-            return axios({
-                method: 'PUT',
-                url: `${process.env.GATEWAY_URL}/service/${KEY}/${VERSION}/${PORT}`
-            });
+            try {
+                const res = await fetch(`${process.env.GATEWAY_URL}/service/${KEY}/${VERSION}/${PORT}`, {
+                    method: 'PUT',
+                    signal: AbortSignal.timeout(10000)
+                });
+
+                if (!res.ok || res.status !== 200) throw new Error('Register Service - Request failed');
+            } catch (err) {
+                console.error(err);
+            }
         }
 
         /*
@@ -75,10 +82,12 @@ function bootstrapService() {
         async function cleanup(err) {
             clearInterval(heartBeat);
             try {
-                await axios({
+                const res = await fetch(`${process.env.GATEWAY_URL}/service/${KEY}/${VERSION}`, {
                     method: 'DELETE',
-                    url: `${process.env.GATEWAY_URL}/service/${KEY}/${VERSION}`
+                    signal: AbortSignal.timeout(10000)
                 });
+
+                if (!res.ok || res.status !== 200) throw new Error('Delete Service from Registry - Request failed');
             } catch (err) {
                 console.error(err);
             }
