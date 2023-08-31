@@ -4,8 +4,8 @@ const amqp = require('amqplib');
 const userController = Router();
 
 // Example Route
-userController.get('/example', (req, res) => {
-    res.send({ message: 'User Controller Success' });
+userController.get('/status', (req, res) => {
+    res.send({ message: 'User Service Success' });
 });
 
 // Forgot Password Route
